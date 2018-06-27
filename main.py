@@ -229,8 +229,8 @@ if __name__ == "__main__":
         print("WARNING: You have a CUDA device, so you should probably run with --cuda")
     if opt.cuda:
         torch.cuda.manual_seed_all(opt.manualSeed)
-    cudnn.enabled = True
-    cudnn.benchmark = True
+    cudnn.enabled = False
+    cudnn.benchmark = False
 
     # define the generator 
     netG = define_netG(in_ch=2)

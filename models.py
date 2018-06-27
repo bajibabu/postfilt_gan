@@ -9,18 +9,18 @@ import torch.nn as nn
 def weights_init(m):
     classname = m.__class__.__name__
     if classname.find('Conv') != -1:
-        m.weight.data.normal_(0.0, 0.01)
+        m.weight.data.normal_(0.0, 0.02)
     elif classname.find('BatchNorm') != -1:
-        m.weight.data.normal_(1.0, 0.01)
+        m.weight.data.normal_(1.0, 0.02)
         m.bias.data.fill_(0)
 
-def define_netD():
-    netD = _netD()
+def define_netD(device):
+    netD = _netD().to(device)
     netD.apply(weights_init)
     return netD
 
-def define_netG(in_ch=2):
-    netG = _netG(in_ch)
+def define_netG(in_ch,device):
+    netG = _netG(in_ch).to(device)
     netG.apply(weights_init)
     return netG
 
@@ -32,7 +32,7 @@ class _netG(nn.Module):
     def __init__(self, in_ch):
         super(_netG, self).__init__()
         self.in_ch = in_ch
-        
+
         # Convolutional 1
         self.conv1 = nn.Sequential(
             # input shape [batch_size x 2 (noise + input mel-cepstrum) x 40 (mgc dim) x T]
@@ -100,20 +100,12 @@ class _netD(nn.Module):
             nn.LeakyReLU(0.2, inplace=True),
 
             # shape [batch_size x 256 x 3 x 3]
-            nn.Conv2d(256, 128, 3, stride=2, bias=True),
-            nn.BatchNorm2d(128),
-            nn.LeakyReLU(0.2, inplace=True)
-        )
-        # after flatten [batch_size x 128 * 1 * 1]
-        # Dense block
-        self.fc1 = nn.Sequential(
-            nn.Linear(128, 1),
+            nn.Conv2d(256, 1, 3, stride=2, bias=True),
             nn.Sigmoid()
+            # final output shape [batch_size x 1]
         )
-        # final output shape [batch_size x 1]
 
     def forward(self, mgc_input):
-        x = self.conv1(mgc_input)
-        x = x.view(x.size(0), -1)
-        x = self.fc1(x)
-        return x
+        output = self.conv1(mgc_input)
+        output = torch.mean(output, -1)    
+        return output.view(-1, 1).squeeze(1)
